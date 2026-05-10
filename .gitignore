@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+.env
+.streamlit/secrets.toml
+data/nutrition_log.csv
+data/workout_log.csv
+data/weight_log.csv
