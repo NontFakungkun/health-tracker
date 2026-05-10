@@ -10,8 +10,10 @@ from datetime import date, timedelta
 
 from config import TARGETS, USER
 from utils.data import load_nutrition_log, load_workout_log, load_weight_log, save_weight_log
+from utils.auth import require_login
 
 st.set_page_config(page_title="Progress", page_icon="📈", layout="wide")
+require_login()
 st.title("Progress & Analytics")
 
 today = date.today()

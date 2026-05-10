@@ -8,8 +8,10 @@ from datetime import date
 
 from config import DAY_TO_WORKOUT, WORKOUTS
 from utils.data import load_workout_log, save_workout_log, get_last_workout_data
+from utils.auth import require_login
 
 st.set_page_config(page_title="Workout", page_icon="🏋️", layout="wide")
+require_login()
 st.title("Workout Tracker")
 
 today = date.today()

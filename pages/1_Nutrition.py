@@ -8,8 +8,10 @@ from datetime import date
 
 from config import TARGETS
 from utils.data import load_nutrition_log, save_nutrition_log, load_food_db, save_food_to_db
+from utils.auth import require_login
 
 st.set_page_config(page_title="Nutrition", page_icon="🥗", layout="wide")
+require_login()
 st.title("Nutrition Tracker")
 
 today = date.today()
