@@ -1,5 +1,5 @@
 streamlit>=1.28.0
 pandas>=2.0.0
 plotly>=5.15.0
-extra-streamlit-components>=0.1.60
+streamlit-cookies-controller
 supabase>=2.0.0

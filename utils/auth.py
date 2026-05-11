@@ -2,26 +2,25 @@ import streamlit as st
 from datetime import datetime, timedelta
 
 COOKIE_NAME = "ht_session"
-COOKIE_DAYS = 30
+COOKIE_MAX_AGE = 30 * 24 * 3600  # 30 days in seconds
 
 
-def _cookie_manager():
+def _controller():
     try:
-        import extra_streamlit_components as stx
-        return stx.CookieManager(key="ht_cookie_mgr")
+        from streamlit_cookies_controller import CookieController
+        return CookieController()
     except Exception:
         return None
 
 
 def require_login():
-    # Must render the cookie component unconditionally (before any st.stop)
-    cm = _cookie_manager()
+    ctrl = _controller()
 
-    # Check cookie to restore session without re-entering password
-    if not st.session_state.get("authenticated") and cm is not None:
+    # Read cookie to restore session across refreshes
+    if not st.session_state.get("authenticated") and ctrl is not None:
         try:
-            cookies = cm.get_all()
-            if isinstance(cookies, dict) and cookies.get(COOKIE_NAME) == "ok":
+            val = ctrl.get(COOKIE_NAME)
+            if val == "ok":
                 st.session_state.authenticated = True
         except Exception:
             pass
@@ -42,10 +41,9 @@ def require_login():
             correct = st.secrets.get("app_password", "")
             if pwd == correct:
                 st.session_state.authenticated = True
-                if cm is not None:
+                if ctrl is not None:
                     try:
-                        cm.set(COOKIE_NAME, "ok",
-                               expires_at=datetime.now() + timedelta(days=COOKIE_DAYS))
+                        ctrl.set(COOKIE_NAME, "ok", max_age=COOKIE_MAX_AGE)
                     except Exception:
                         pass
                 st.rerun()
@@ -57,10 +55,10 @@ def require_login():
 
 def logout():
     st.session_state.authenticated = False
-    cm = _cookie_manager()
-    if cm is not None:
+    ctrl = _controller()
+    if ctrl is not None:
         try:
-            cm.delete(COOKIE_NAME)
+            ctrl.remove(COOKIE_NAME)
         except Exception:
             pass
     st.rerun()
