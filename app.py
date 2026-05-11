@@ -8,8 +8,9 @@ import random
 
 from config import USER, TARGETS, DAY_TO_WORKOUT, WORKOUTS
 from utils.data import get_today_nutrition, load_weight_log
-from utils.auth import require_login
+from utils.auth import require_login, debug_cookie_state
 
+debug_cookie_state()
 st.set_page_config(
     page_title="Fitness Tracker",
     page_icon="💪",
