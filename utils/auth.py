@@ -1,48 +1,60 @@
 import streamlit as st
+import streamlit.components.v1 as components
+from datetime import datetime, timedelta
 
 COOKIE_NAME = "ht_session"
-COOKIE_MAX_AGE = 30 * 24 * 3600  # 30 days in seconds
+COOKIE_DAYS = 30
 
 
-def _controller():
+# ── Write via raw JS (confirmed to persist to browser DevTools) ────────────
+
+def _cookie_string(value: str, days: int) -> str:
+    expires = (datetime.utcnow() + timedelta(days=days)).strftime("%a, %d %b %Y %H:%M:%S GMT")
+    return f"{COOKIE_NAME}={value}; expires={expires}; path=/; SameSite=Lax"
+
+
+def _set_cookie(value: str = "ok"):
+    cookie = _cookie_string(value, COOKIE_DAYS)
+    components.html(
+        f"<script>try{{window.parent.document.cookie='{cookie}';}}catch(e){{document.cookie='{cookie}';}}</script>",
+        height=0, width=0,
+    )
+
+
+def _clear_cookie():
+    gone = f"{COOKIE_NAME}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/"
+    components.html(
+        f"<script>try{{window.parent.document.cookie='{gone}';}}catch(e){{document.cookie='{gone}';}}</script>",
+        height=0, width=0,
+    )
+
+
+# ── Read via st.context.cookies (Python-side, synchronous, no JS round-trip) ─
+
+def _read_cookie() -> str | None:
     try:
-        from streamlit_cookies_controller import CookieController
-        return CookieController()
-    except Exception:
-        return None
+        return st.context.cookies.get(COOKIE_NAME)
+    except AttributeError:
+        return None  # Streamlit < 1.37 — fall back gracefully
 
+
+# ── Main entry ─────────────────────────────────────────────────────────────
 
 def require_login():
-    ctrl = _controller()
-
-    # Already authenticated this session — nothing to do
+    # PATH 1: already authenticated this session
     if st.session_state.get("authenticated"):
+        if not st.session_state.get("_cookie_refreshed"):
+            _set_cookie()  # rolling 30-day expiry on first render of each session
+            st.session_state._cookie_refreshed = True
         return
 
-    if ctrl is not None:
-        try:
-            val = ctrl.get(COOKIE_NAME)
-
-            if val == "ok":
-                st.session_state.authenticated = True
-                # Rolling expiry: reset the cookie to 30 days from now on every visit
-                ctrl.set(COOKIE_NAME, "ok", max_age=COOKIE_MAX_AGE)
-                return
-
-            # Cookie component needs one render cycle to initialise —
-            # rerun once so it can hand back the cookie value before we
-            # decide the user is logged out.
-            if not st.session_state.get("_auth_init"):
-                st.session_state._auth_init = True
-                st.rerun()
-
-        except Exception:
-            pass
-
-    if st.session_state.get("authenticated"):
+    # PATH 2: check real browser cookie (synchronous — no async component needed)
+    if _read_cookie() == "ok":
+        st.session_state.authenticated = True
+        st.session_state._cookie_refreshed = True
         return
 
-    # ── Login form ──────────────────────────────────────────────
+    # PATH 3: no cookie — show login form
     _, col, _ = st.columns([1, 2, 1])
     with col:
         st.markdown("## 💪 Health Tracker")
@@ -55,11 +67,7 @@ def require_login():
             correct = st.secrets.get("app_password", "")
             if pwd == correct:
                 st.session_state.authenticated = True
-                if ctrl is not None:
-                    try:
-                        ctrl.set(COOKIE_NAME, "ok", max_age=COOKIE_MAX_AGE)
-                    except Exception:
-                        pass
+                st.session_state._cookie_refreshed = False  # trigger set on next render
                 st.rerun()
             else:
                 st.error("Wrong password.")
@@ -69,10 +77,22 @@ def require_login():
 
 def logout():
     st.session_state.authenticated = False
-    ctrl = _controller()
-    if ctrl is not None:
-        try:
-            ctrl.remove(COOKIE_NAME)
-        except Exception:
-            pass
+    st.session_state._cookie_refreshed = False
+    _clear_cookie()
     st.rerun()
+
+
+def debug_cookie_state():
+    st.write("**Cookie debug**")
+    st.write("authenticated:", st.session_state.get("authenticated"))
+    st.write("cookie via st.context:", _read_cookie())
+    components.html(
+        """
+        <div id='rc' style='font-family:monospace;font-size:11px;color:#aaa'></div>
+        <script>
+            try { document.getElementById('rc').innerText = "parent cookies: " + window.parent.document.cookie; }
+            catch (e) { document.getElementById('rc').innerText = "iframe cookies: " + document.cookie; }
+        </script>
+        """,
+        height=30,
+    )
