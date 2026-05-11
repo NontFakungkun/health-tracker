@@ -1,5 +1,4 @@
 import streamlit as st
-from datetime import datetime, timedelta
 
 COOKIE_NAME = "ht_session"
 COOKIE_MAX_AGE = 30 * 24 * 3600  # 30 days in seconds
@@ -16,19 +15,34 @@ def _controller():
 def require_login():
     ctrl = _controller()
 
-    # Read cookie to restore session across refreshes
-    if not st.session_state.get("authenticated") and ctrl is not None:
+    # Already authenticated this session — nothing to do
+    if st.session_state.get("authenticated"):
+        return
+
+    if ctrl is not None:
         try:
             val = ctrl.get(COOKIE_NAME)
+
             if val == "ok":
                 st.session_state.authenticated = True
+                # Rolling expiry: reset the cookie to 30 days from now on every visit
+                ctrl.set(COOKIE_NAME, "ok", max_age=COOKIE_MAX_AGE)
+                return
+
+            # Cookie component needs one render cycle to initialise —
+            # rerun once so it can hand back the cookie value before we
+            # decide the user is logged out.
+            if not st.session_state.get("_auth_init"):
+                st.session_state._auth_init = True
+                st.rerun()
+
         except Exception:
             pass
 
     if st.session_state.get("authenticated"):
         return
 
-    # Login form
+    # ── Login form ──────────────────────────────────────────────
     _, col, _ = st.columns([1, 2, 1])
     with col:
         st.markdown("## 💪 Health Tracker")
