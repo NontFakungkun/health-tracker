@@ -5,8 +5,7 @@ COOKIE_NAME = "ht_session"
 COOKIE_DAYS = 30
 
 
-@st.cache_resource
-def _get_cookie_manager():
+def _cookie_manager():
     try:
         import extra_streamlit_components as stx
         return stx.CookieManager(key="ht_cookie_mgr")
@@ -14,44 +13,18 @@ def _get_cookie_manager():
         return None
 
 
-def _read_auth_cookie() -> bool:
-    cm = _get_cookie_manager()
-    if cm is None:
-        return False
-    try:
-        cookies = cm.get_all()
-        return isinstance(cookies, dict) and cookies.get(COOKIE_NAME) == "ok"
-    except Exception:
-        return False
-
-
-def _write_auth_cookie():
-    cm = _get_cookie_manager()
-    if cm is None:
-        return
-    try:
-        cm.set(COOKIE_NAME, "ok", expires_at=datetime.now() + timedelta(days=COOKIE_DAYS))
-    except Exception:
-        pass
-
-
-def _clear_auth_cookie():
-    cm = _get_cookie_manager()
-    if cm is None:
-        return
-    try:
-        cm.delete(COOKIE_NAME)
-    except Exception:
-        pass
-
-
 def require_login():
-    # Render the invisible cookie component (must happen before st.stop)
-    _get_cookie_manager()
+    # Must render the cookie component unconditionally (before any st.stop)
+    cm = _cookie_manager()
 
-    # Cookie check — sets session on first load after previous login
-    if not st.session_state.get("authenticated") and _read_auth_cookie():
-        st.session_state.authenticated = True
+    # Check cookie to restore session without re-entering password
+    if not st.session_state.get("authenticated") and cm is not None:
+        try:
+            cookies = cm.get_all()
+            if isinstance(cookies, dict) and cookies.get(COOKIE_NAME) == "ok":
+                st.session_state.authenticated = True
+        except Exception:
+            pass
 
     if st.session_state.get("authenticated"):
         return
@@ -69,7 +42,12 @@ def require_login():
             correct = st.secrets.get("app_password", "")
             if pwd == correct:
                 st.session_state.authenticated = True
-                _write_auth_cookie()
+                if cm is not None:
+                    try:
+                        cm.set(COOKIE_NAME, "ok",
+                               expires_at=datetime.now() + timedelta(days=COOKIE_DAYS))
+                    except Exception:
+                        pass
                 st.rerun()
             else:
                 st.error("Wrong password.")
@@ -79,5 +57,10 @@ def require_login():
 
 def logout():
     st.session_state.authenticated = False
-    _clear_auth_cookie()
+    cm = _cookie_manager()
+    if cm is not None:
+        try:
+            cm.delete(COOKIE_NAME)
+        except Exception:
+            pass
     st.rerun()
