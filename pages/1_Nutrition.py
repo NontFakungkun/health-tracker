@@ -119,12 +119,12 @@ with tab_custom:
         existing_categories = sorted(df_food["category"].dropna().unique().tolist()) if not df_food.empty else []
         category_options = ["My Foods"] + [c for c in existing_categories if c != "My Foods"] + ["Other"]
         c_category = st.selectbox("Category (for database)", category_options)
-        c_cal = st.number_input("Calories (kcal)", min_value=0, step=10, key="c_cal")
+        c_cal = st.number_input("Calories (kcal)", min_value=0, value=None, placeholder="0", step=10, key="c_cal")
 
     with col_right:
-        c_pro = st.number_input("Protein (g)", min_value=0.0, step=1.0, key="c_pro")
-        c_carb = st.number_input("Carbs (g)", min_value=0.0, step=1.0, key="c_carb")
-        c_fat = st.number_input("Fat (g)", min_value=0.0, step=1.0, key="c_fat")
+        c_pro = st.number_input("Protein (g)", min_value=0.0, value=None, placeholder="0", step=1.0, key="c_pro")
+        c_carb = st.number_input("Carbs (g)", min_value=0.0, value=None, placeholder="0", step=1.0, key="c_carb")
+        c_fat = st.number_input("Fat (g)", min_value=0.0, value=None, placeholder="0", step=1.0, key="c_fat")
         c_serving_g = st.number_input(
             "Serving size (g) — used for database scaling",
             min_value=1.0, value=100.0, step=10.0,
@@ -144,15 +144,19 @@ with tab_custom:
     )
 
     if st.button("Add to Today's Log", type="primary", key="btn_custom"):
+        _c_cal = c_cal or 0
+        _c_pro = c_pro or 0.0
+        _c_carb = c_carb or 0.0
+        _c_fat = c_fat or 0.0
         if not c_name:
             st.error("Please enter a meal name.")
-        elif c_cal <= 0:
+        elif _c_cal <= 0:
             st.error("Please enter the calories.")
         else:
             # Always log to today
             new = pd.DataFrame([{
                 "date": today, "meal": c_meal, "food_name": c_name,
-                "calories": c_cal, "protein_g": c_pro, "carbs_g": c_carb, "fat_g": c_fat,
+                "calories": _c_cal, "protein_g": _c_pro, "carbs_g": _c_carb, "fat_g": _c_fat,
                 "quantity": c_serving_g, "unit": c_serving_name, "notes": c_notes,
             }])
             df_log = pd.concat([df_log, new], ignore_index=True)
@@ -162,10 +166,10 @@ with tab_custom:
                 save_food_to_db(
                     food_name=c_name,
                     category=c_category,
-                    calories=c_cal,
-                    protein=c_pro,
-                    carbs=c_carb,
-                    fat=c_fat,
+                    calories=_c_cal,
+                    protein=_c_pro,
+                    carbs=_c_carb,
+                    fat=_c_fat,
                     serving_g=c_serving_g,
                     serving_name=c_serving_name,
                 )
