@@ -8,7 +8,6 @@ import random
 
 from config import USER, TARGETS, DAY_TO_WORKOUT, WORKOUTS
 from utils.data import get_today_nutrition, load_weight_log
-from utils.auth import require_login
 
 st.set_page_config(
     page_title="Fitness Tracker",
@@ -22,8 +21,6 @@ st.markdown("""
 [data-testid="stMetricDelta"] svg { display: none; }
 </style>
 """, unsafe_allow_html=True)
-
-require_login()
 
 today = date.today()
 day_idx = today.weekday()

@@ -10,10 +10,8 @@ from datetime import date, timedelta
 
 from config import TARGETS, USER
 from utils.data import load_nutrition_log, load_workout_log, load_weight_log, save_weight_log
-from utils.auth import require_login
 
 st.set_page_config(page_title="Progress", page_icon="📈", layout="wide")
-require_login()
 st.title("Progress & Analytics")
 
 today = date.today()
@@ -70,7 +68,7 @@ with col_chart:
         fig_w.add_hline(y=USER["start_weight_kg"], line_dash="dash", line_color="#a3e04f",
                         annotation_text=f"Start: {USER['start_weight_kg']}kg")
         fig_w.update_layout(**CHART_STYLE, title_font_size=14)
-        st.plotly_chart(fig_w, use_container_width=True)
+        st.plotly_chart(fig_w, width='stretch')
     else:
         st.info("Log your weight daily to see progress here.")
 
@@ -111,7 +109,7 @@ else:
             fig_cal.add_hline(y=TARGETS["calories"], line_dash="dash", line_color="#a3e04f",
                               annotation_text=f"Target: {TARGETS['calories']} kcal")
             fig_cal.update_layout(**CHART_STYLE, title="Daily Calories", title_font_size=14)
-            st.plotly_chart(fig_cal, use_container_width=True)
+            st.plotly_chart(fig_cal, width='stretch')
 
         with col_pro:
             fig_pro = go.Figure()
@@ -122,7 +120,7 @@ else:
             fig_pro.add_hline(y=TARGETS["protein_g"], line_dash="dash", line_color="#e0a34f",
                               annotation_text=f"Target: {TARGETS['protein_g']}g")
             fig_pro.update_layout(**CHART_STYLE, title="Daily Protein", title_font_size=14)
-            st.plotly_chart(fig_pro, use_container_width=True)
+            st.plotly_chart(fig_pro, width='stretch')
 
         # Adherence stats
         pro_min = TARGETS["protein_min_g"]
@@ -163,7 +161,7 @@ else:
         prs.columns = ["Exercise", "Reps", "Weight (kg)", "Est. 1RM (kg)", "Date"]
         prs["Est. 1RM (kg)"] = prs["Est. 1RM (kg)"].round(1)
         prs = prs.sort_values("Weight (kg)", ascending=False).reset_index(drop=True)
-        st.dataframe(prs, use_container_width=True, hide_index=True)
+        st.dataframe(prs, width='stretch', hide_index=True)
     else:
         st.info("No weighted exercises logged yet.")
 
@@ -181,7 +179,7 @@ else:
             markers=True, color_discrete_sequence=["#e07a4f"],
         )
         fig_ex.update_layout(**CHART_STYLE, title_font_size=14)
-        st.plotly_chart(fig_ex, use_container_width=True)
+        st.plotly_chart(fig_ex, width='stretch')
 
         # Also show volume (sets × reps × weight)
         ex_data["volume"] = ex_data["reps_n"] * ex_data["weight_kg"]
@@ -192,7 +190,7 @@ else:
             color_discrete_sequence=["#a34fe0"],
         )
         fig_vol.update_layout(**CHART_STYLE, title_font_size=14)
-        st.plotly_chart(fig_vol, use_container_width=True)
+        st.plotly_chart(fig_vol, width='stretch')
 
 st.divider()
 
@@ -222,6 +220,6 @@ if not df_workout.empty and not df_w[df_w["weight_kg"] > 0].empty:
             barmode="stack",
         )
         fig_muscle.update_layout(**CHART_STYLE, title_font_size=14)
-        st.plotly_chart(fig_muscle, use_container_width=True)
+        st.plotly_chart(fig_muscle, width='stretch')
 else:
     st.info("Log a few workouts to see volume breakdown here.")
